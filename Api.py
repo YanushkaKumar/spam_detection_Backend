@@ -168,7 +168,7 @@ class ImprovedSpamAPI:
                 
             text = ' '.join([word for word in words if word not in stop_words])
         
-        return text
+        return text 
     
     def detect_language(self, text):
         """Detect language of the text"""
