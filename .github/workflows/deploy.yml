@@ -3,35 +3,40 @@ name: Deploy to Azure VM
 on:
   push:
     branches:
-      - main  # or your deployment branch
+      - main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
+    - name: 📦 Checkout Repository
       uses: actions/checkout@v3
 
-    - name: Copy project files to Azure VM
+    - name: 🚀 Copy Project Files to Azure VM (with password)
       uses: appleboy/scp-action@v0.1.4
       with:
         host: ${{ secrets.AZURE_VM_IP }}
         username: ${{ secrets.AZURE_VM_USER }}
-        key: ${{ secrets.AZURE_VM_SSH_KEY }}
+        password: ${{ secrets.AZURE_VM_PASSWORD }}
+        port: 22
         source: "."
         target: "/home/${{ secrets.AZURE_VM_USER }}/backend"
+        strip_components: 1
 
-    - name: Run deployment script on VM
+    - name: 🛠️ Run Deployment Script on Azure VM (with password)
       uses: appleboy/ssh-action@master
       with:
         host: ${{ secrets.AZURE_VM_IP }}
         username: ${{ secrets.AZURE_VM_USER }}
-        key: ${{ secrets.AZURE_VM_SSH_KEY }}
+        password: ${{ secrets.AZURE_VM_PASSWORD }}
+        port: 22
         script: |
           cd ~/backend
           python3 -m venv venv
           source venv/bin/activate
           pip install --upgrade pip
           pip install -r requirements.txt
+          pkill -f Api.py || true
           nohup python3 Api.py > log.txt 2>&1 &
+          echo "✅ Deployed successfully"
