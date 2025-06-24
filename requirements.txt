@@ -1,0 +1,9 @@
+Flask
+joblib
+langid
+numpy
+scipy
+nltk
+scikit-learn
+pandas
+Singlish2Sinhala
