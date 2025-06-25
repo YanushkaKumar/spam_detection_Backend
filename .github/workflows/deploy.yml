@@ -8,10 +8,11 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 30  # Add explicit timeout
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4  # Updated to latest version
 
     - name: Copy project to Azure VM
       uses: appleboy/scp-action@v0.1.4
@@ -21,23 +22,66 @@ jobs:
         password: ${{ secrets.AZURE_VM_PASSWORD }}
         source: "."
         target: "/home/${{ secrets.AZURE_VM_USER }}/backend"
+        timeout: 120s  # Add timeout for SCP
+        overwrite: true  # Ensure files are overwritten
 
     - name: Deploy app on Azure VM
-      uses: appleboy/ssh-action@master
+      uses: appleboy/ssh-action@v1.0.3  # Use specific version instead of master
       with:
         host: ${{ secrets.AZURE_VM_IP }}
         username: ${{ secrets.AZURE_VM_USER }}
         password: ${{ secrets.AZURE_VM_PASSWORD }}
         port: 22
+        timeout: 300s  # 5 minutes timeout
+        command_timeout: 60s  # Individual command timeout
         script: |
+          set -e  # Exit on any error
+          
+          echo "Starting deployment..."
+          
+          # Update system packages
+          echo "Updating packages..."
           sudo apt update
           sudo apt install -y python3.10-venv python3-pip
+          
+          # Navigate to project directory
+          echo "Setting up project directory..."
           cd ~/backend
-          python3 -m venv venv
+          
+          # Create virtual environment if it doesn't exist
+          echo "Setting up virtual environment..."
+          if [ ! -d "venv" ]; then
+            python3 -m venv venv
+          fi
+          
+          # Activate virtual environment and install dependencies
+          echo "Installing dependencies..."
           source venv/bin/activate
           pip install --upgrade pip
           pip install -r requirements.txt
-          pkill -f Api.py || true
-          nohup python3 Api.py > log.txt 2>&1 & disown
-          sleep 5
-          tail -n 20 log.txt || true
+          
+          # Stop existing process
+          echo "Stopping existing process..."
+          pkill -f Api.py || echo "No existing process found"
+          sleep 2
+          
+          # Start the application
+          echo "Starting application..."
+          nohup python3 Api.py > log.txt 2>&1 &
+          APP_PID=$!
+          echo "Application started with PID: $APP_PID"
+          
+          # Wait a moment and check if process is running
+          sleep 3
+          if ps -p $APP_PID > /dev/null; then
+            echo "Application is running successfully"
+            echo "Recent logs:"
+            tail -n 10 log.txt || echo "No logs available yet"
+          else
+            echo "Application failed to start"
+            echo "Error logs:"
+            tail -n 20 log.txt || echo "No logs available"
+            exit 1
+          fi
+          
+          echo "Deployment completed successfully"
