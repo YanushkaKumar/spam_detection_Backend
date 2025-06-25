@@ -8,45 +8,50 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 30  # Add explicit timeout
+    timeout-minutes: 30
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4  # Updated to latest version
+      uses: actions/checkout@v4
 
-    - name: Copy project to Azure VM
-      uses: appleboy/scp-action@v0.1.4
-      with:
-        host: ${{ secrets.AZURE_VM_IP }}
-        username: ${{ secrets.AZURE_VM_USER }}
-        password: ${{ secrets.AZURE_VM_PASSWORD }}
-        source: "."
-        target: "/home/${{ secrets.AZURE_VM_USER }}/backend"
-        timeout: 120s  # Add timeout for SCP
-        overwrite: true  # Ensure files are overwritten
-
-    - name: Deploy app on Azure VM
-      uses: appleboy/ssh-action@v1.0.3  # Use specific version instead of master
+    - name: Deploy to Azure VM
+      uses: appleboy/ssh-action@v1.0.3
       with:
         host: ${{ secrets.AZURE_VM_IP }}
         username: ${{ secrets.AZURE_VM_USER }}
         password: ${{ secrets.AZURE_VM_PASSWORD }}
         port: 22
-        timeout: 300s  # 5 minutes timeout
-        command_timeout: 60s  # Individual command timeout
+        timeout: 300s
+        command_timeout: 60s
         script: |
-          set -e  # Exit on any error
+          set -e
           
           echo "Starting deployment..."
+          
+          # Create backup directory
+          if [ -d "~/backend" ]; then
+            echo "Backing up existing deployment..."
+            cp -r ~/backend ~/backend_backup_$(date +%Y%m%d_%H%M%S) || true
+          fi
+          
+          # Create project directory
+          mkdir -p ~/backend
+          cd ~/backend
+          
+          # Clone/pull latest code (alternative to SCP)
+          if [ -d ".git" ]; then
+            echo "Updating existing repository..."
+            git fetch origin
+            git reset --hard origin/main
+          else
+            echo "Cloning repository..."
+            git clone https://github.com/${{ github.repository }}.git .
+          fi
           
           # Update system packages
           echo "Updating packages..."
           sudo apt update
           sudo apt install -y python3.10-venv python3-pip
-          
-          # Navigate to project directory
-          echo "Setting up project directory..."
-          cd ~/backend
           
           # Create virtual environment if it doesn't exist
           echo "Setting up virtual environment..."
@@ -71,7 +76,7 @@ jobs:
           APP_PID=$!
           echo "Application started with PID: $APP_PID"
           
-          # Wait a moment and check if process is running
+          # Wait and verify
           sleep 3
           if ps -p $APP_PID > /dev/null; then
             echo "Application is running successfully"
