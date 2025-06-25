@@ -20,13 +20,11 @@ jobs:
         host: ${{ secrets.AZURE_VM_IP }}
         username: ${{ secrets.AZURE_VM_USER }}
         password: ${{ secrets.AZURE_VM_PASSWORD }}
-        source: "."
+        source: "*.py,requirements.txt,templates/,static/"
         target: "/home/${{ secrets.AZURE_VM_USER }}/backend"
-        timeout: 120s  # Add timeout for SCP
-        overwrite: true  # Ensure files are overwritten
-        rm: true  # Remove target directory before copying
-        strip_components: 1  # Remove leading path components
-        tar_exec: "tar --exclude='.git' --exclude='node_modules' --exclude='__pycache__' --exclude='*.pyc' --exclude='.github' --exclude='venv' -czf"
+        timeout: 120s
+        overwrite: true
+        rm: true
 
     - name: Deploy app on Azure VM
       uses: appleboy/ssh-action@v1.0.3  # Use specific version instead of master
