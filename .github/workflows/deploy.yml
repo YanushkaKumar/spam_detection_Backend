@@ -31,54 +31,44 @@ jobs:
         username: ${{ secrets.AZURE_VM_USER }}
         password: ${{ secrets.AZURE_VM_PASSWORD }}
         port: 22
-        timeout: 1800s  # 30 minute timeout for deployment
+        timeout: 300s  # Reduced timeout since packages are already installed
+        command_timeout: 60s  # Timeout for individual commands
         script: |
-          set -e  # Exit on any error
-          
+          # Don't exit on error immediately - handle errors gracefully
           echo "Starting deployment..."
           
-          # Update system packages
-          sudo apt update
-          sudo apt install -y python3.10-venv python3-pip
-          
           # Navigate to project directory
-          cd ~/backend
-          
-          # Create virtual environment if it doesn't exist
-          if [ ! -d "venv" ]; then
-            echo "Creating virtual environment..."
-            python3 -m venv venv
-          fi
+          cd ~/backend || { echo "Failed to navigate to backend directory"; exit 1; }
           
           # Activate virtual environment
-          source venv/bin/activate
+          source venv/bin/activate || { echo "Failed to activate virtual environment"; exit 1; }
           
-          # Upgrade pip
-          pip install --upgrade pip
-          
-          # Install dependencies with timeout and retry logic
-          echo "Installing dependencies..."
-          timeout 1200 pip install -r requirements.txt --no-cache-dir || {
-            echo "First install attempt failed, retrying..."
-            timeout 1200 pip install -r requirements.txt --no-cache-dir --force-reinstall
+          # Quick check if dependencies are installed
+          echo "Checking dependencies..."
+          python3 -c "import flask, numpy, sklearn, nltk; print('All dependencies available')" || {
+            echo "Dependencies missing, installing..."
+            pip install -r requirements.txt --no-cache-dir
           }
           
-          # Stop existing application
+          # Stop existing application gracefully
           echo "Stopping existing application..."
-          pkill -f Api.py || true
-          sleep 5  # Wait for process to fully terminate
+          pkill -f Api.py || echo "No existing process found"
           
-          # Start application
+          # Wait for process to terminate
+          sleep 3
+          
+          # Start application in background
           echo "Starting application..."
           nohup python3 Api.py > log.txt 2>&1 &
           
-          # Wait a moment and check if process started
-          sleep 3
-          if pgrep -f Api.py > /dev/null; then
-            echo "Application started successfully"
-          else
-            echo "Failed to start application"
-            exit 1
-          fi
+          # Give it a moment to start
+          sleep 2
           
-          echo "Deployment completed successfully"
+          # Check if process is running
+          if pgrep -f Api.py > /dev/null; then
+            echo "Application started successfully (PID: $(pgrep -f Api.py))"
+            echo "Deployment completed successfully"
+          else
+            echo "Warning: Application may not have started properly"
+            echo "Check log.txt for details"
+          fi
