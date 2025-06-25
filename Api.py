@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS 
 import joblib
 import langid
 import numpy as np
@@ -32,7 +33,7 @@ except:
 app = Flask(__name__)
 CORS(app)
 
-from flask_cors import CORS
+
 class ImprovedSpamAPI:
     def __init__(self):
         import os
