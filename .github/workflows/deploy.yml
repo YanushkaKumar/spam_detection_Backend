@@ -33,8 +33,8 @@ jobs:
         username: ${{ secrets.AZURE_VM_USER }}
         password: ${{ secrets.AZURE_VM_PASSWORD }}
         port: 22
-        timeout: 300s  # 5 minutes timeout
-        command_timeout: 60s  # Individual command timeout
+        timeout: 600s  # 10 minutes timeout
+        command_timeout: 120s  # 2 minutes per command timeout
         script: |
           set -e  # Exit on any error
           
@@ -63,8 +63,15 @@ jobs:
           
           # Stop existing process
           echo "Stopping existing process..."
-          pkill -f Api.py || echo "No existing process found"
+          timeout 10s pkill -f Api.py || echo "No existing process found or timeout reached"
           sleep 2
+          
+          # Force kill if still running
+          if pgrep -f Api.py > /dev/null; then
+            echo "Force killing remaining processes..."
+            timeout 5s pkill -9 -f Api.py || true
+            sleep 1
+          fi
           
           # Start the application
           echo "Starting application..."
