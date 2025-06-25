@@ -1,5 +1,4 @@
 name: Deploy to Azure VM
-
 on:
   push:
     branches:
@@ -8,11 +7,11 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
+    
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
-
+     
     - name: Copy project to Azure VM
       uses: appleboy/scp-action@v0.1.4
       with:
@@ -21,7 +20,7 @@ jobs:
         password: ${{ secrets.AZURE_VM_PASSWORD }}
         source: "."
         target: "/home/${{ secrets.AZURE_VM_USER }}/backend"
-
+     
     - name: Deploy app on Azure VM
       uses: appleboy/ssh-action@master
       with:
@@ -29,13 +28,48 @@ jobs:
         username: ${{ secrets.AZURE_VM_USER }}
         password: ${{ secrets.AZURE_VM_PASSWORD }}
         port: 22
+        command_timeout: 10m
         script: |
+          # Update system packages
           sudo apt update
           sudo apt install -y python3.10-venv python3-pip
+          
+          # Navigate to project directory
           cd ~/backend
+          
+          # Create and activate virtual environment
           python3 -m venv venv
           source venv/bin/activate
+          
+          # Install dependencies
           pip install --upgrade pip
           pip install -r requirements.txt
+          
+          # Stop existing process if running
           pkill -f Api.py || true
-          nohup python3 Api.py > log.txt 2>&1 &
+          
+          # Wait a moment for process to fully terminate
+          sleep 2
+          
+          # Create a startup script
+          cat > start_app.sh << 'EOF'
+            #!/bin/bash
+            cd ~/backend
+            source venv/bin/activate
+            python3 Api.py > log.txt 2>&1 &
+            echo $! > app.pid
+            echo "Application started with PID: $(cat app.pid)"
+            EOF
+                      
+                      # Make script executable and run it
+                      chmod +x start_app.sh
+                      ./start_app.sh
+                      
+                      # Verify the application started
+                      sleep 3
+                      if ps -p $(cat app.pid) > /dev/null 2>&1; then
+                        echo "Application is running successfully with PID: $(cat app.pid)"
+                      else
+                        echo "Failed to start application"
+                        exit 1
+                      fi
