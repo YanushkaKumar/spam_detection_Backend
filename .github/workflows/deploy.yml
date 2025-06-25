@@ -13,15 +13,29 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v3
 
-    - name: Deploy via SSH with password
-      uses: appleboy/ssh-action@v1.0.3
+    - name: Copy project to Azure VM
+      uses: appleboy/scp-action@v0.1.4
       with:
-        host: ${{ secrets.SERVER_HOST }}
-        username: ${{ secrets.SERVER_USER }}
-        password: ${{ secrets.SERVER_PASSWORD }}
+        host: ${{ secrets.AZURE_VM_IP }}
+        username: ${{ secrets.AZURE_VM_USER }}
+        password: ${{ secrets.AZURE_VM_PASSWORD }}
+        source: "."
+        target: "/home/${{ secrets.AZURE_VM_USER }}/backend"
+
+    - name: Deploy app on Azure VM
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.AZURE_VM_IP }}
+        username: ${{ secrets.AZURE_VM_USER }}
+        password: ${{ secrets.AZURE_VM_PASSWORD }}
         port: 22
         script: |
-          cd /home/${{ secrets.SERVER_USER }}/BACK_END
-          git pull origin main
-          docker-compose down
-          docker-compose up -d --build
+          sudo apt update
+          sudo apt install -y python3.10-venv python3-pip
+          cd ~/backend
+          python3 -m venv venv
+          source venv/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pkill -f Api.py || true
+          nohup python3 Api.py > log.txt 2>&1 &
