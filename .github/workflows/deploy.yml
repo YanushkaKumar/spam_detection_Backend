@@ -36,8 +36,9 @@ jobs:
           python3 -m venv venv
           source venv/bin/activate
           pip install --upgrade pip
-          pip install --no-cache-dir -r requirements.txt
+          pip install -r requirements.txt
           pkill -f Api.py || true
           nohup python3 Api.py > log.txt 2>&1 & disown
           sleep 5
           tail -n 20 log.txt || true
+
