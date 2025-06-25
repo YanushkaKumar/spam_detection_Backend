@@ -41,4 +41,3 @@ jobs:
           nohup python3 Api.py > log.txt 2>&1 & disown
           sleep 5
           tail -n 20 log.txt || true
-
