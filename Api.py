@@ -29,31 +29,36 @@ app = Flask(__name__)
 
 class ImprovedSpamAPI:
     def __init__(self):
-       try:
-        self.english_model = joblib.load('models\\improved_english_spam_model.pkl')
-        self.sinhala_model = joblib.load('models\\improved_sinhala_spam_model.pkl')
-        self.english_vectorizer = joblib.load('models\\improved_english_vectorizer.pkl')
-        self.sinhala_vectorizer = joblib.load('models\\improved_sinhala_vectorizer.pkl')
-        self.feature_scaler = joblib.load('models\\feature_scaler.pkl')
+        import os
         try:
-            self.english_nb_model = joblib.load('models\\english_nb_model.pkl')
-            self.sinhala_nb_model = joblib.load('models\\sinhala_nb_model.pkl')
-            self.has_nb_models = True
-            print("Loaded separate NB models successfully")
-        except:
-            print("Warning: Separate NB models not found. Using ensemble only.")
+            # Use os.path.join for cross-platform compatibility
+            models_dir = os.path.join(os.path.dirname(__file__), 'models')
+            
+            self.english_model = joblib.load(os.path.join(models_dir, 'improved_english_spam_model.pkl'))
+            self.sinhala_model = joblib.load(os.path.join(models_dir, 'improved_sinhala_spam_model.pkl'))
+            self.english_vectorizer = joblib.load(os.path.join(models_dir, 'improved_english_vectorizer.pkl'))
+            self.sinhala_vectorizer = joblib.load(os.path.join(models_dir, 'improved_sinhala_vectorizer.pkl'))
+            self.feature_scaler = joblib.load(os.path.join(models_dir, 'feature_scaler.pkl'))
+            
+            try:
+                self.english_nb_model = joblib.load(os.path.join(models_dir, 'english_nb_model.pkl'))
+                self.sinhala_nb_model = joblib.load(os.path.join(models_dir, 'sinhala_nb_model.pkl'))
+                self.has_nb_models = True
+                print("Loaded separate NB models successfully")
+            except:
+                print("Warning: Separate NB models not found. Using ensemble only.")
+                self.has_nb_models = False
+            print("All models loaded successfully!")
+        except Exception as e:
+            print(f"Error loading models: {e}")
+            self.english_model = None
+            self.sinhala_model = None
+            self.english_vectorizer = None
+            self.sinhala_vectorizer = None
+            self.feature_scaler = None
             self.has_nb_models = False
-        print("All models loaded successfully!")
-       except Exception as e:
-        print(f"Error loading models: {e}")
-        self.english_model = None
-        self.sinhala_model = None
-        self.english_vectorizer = None
-        self.sinhala_vectorizer = None
-        self.feature_scaler = None
-        self.has_nb_models = False
-        print(f"Error loading models: {e}")
-        raise
+            print(f"Error loading models: {e}")
+            raise
     
     def extract_features(self, text, language='en'):
         """Extract additional features from text (same as training)"""
