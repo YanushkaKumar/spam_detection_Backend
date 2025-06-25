@@ -8,7 +8,6 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 30  # Set overall job timeout
 
     steps:
     - name: Checkout code
@@ -22,7 +21,6 @@ jobs:
         password: ${{ secrets.AZURE_VM_PASSWORD }}
         source: "."
         target: "/home/${{ secrets.AZURE_VM_USER }}/backend"
-        timeout: 300s  # 5 minute timeout for file transfer
 
     - name: Deploy app on Azure VM
       uses: appleboy/ssh-action@master
@@ -31,44 +29,13 @@ jobs:
         username: ${{ secrets.AZURE_VM_USER }}
         password: ${{ secrets.AZURE_VM_PASSWORD }}
         port: 22
-        timeout: 300s  # Reduced timeout since packages are already installed
-        command_timeout: 60s  # Timeout for individual commands
         script: |
-          # Don't exit on error immediately - handle errors gracefully
-          echo "Starting deployment..."
-          
-          # Navigate to project directory
-          cd ~/backend || { echo "Failed to navigate to backend directory"; exit 1; }
-          
-          # Activate virtual environment
-          source venv/bin/activate || { echo "Failed to activate virtual environment"; exit 1; }
-          
-          # Quick check if dependencies are installed
-          echo "Checking dependencies..."
-          python3 -c "import flask, numpy, sklearn, nltk; print('All dependencies available')" || {
-            echo "Dependencies missing, installing..."
-            pip install -r requirements.txt --no-cache-dir
-          }
-          
-          # Stop existing application gracefully
-          echo "Stopping existing application..."
-          pkill -f Api.py || echo "No existing process found"
-          
-          # Wait for process to terminate
-          sleep 3
-          
-          # Start application in background
-          echo "Starting application..."
+          sudo apt update
+          sudo apt install -y python3.10-venv python3-pip
+          cd ~/backend
+          python3 -m venv venv
+          source venv/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pkill -f Api.py || true
           nohup python3 Api.py > log.txt 2>&1 &
-          
-          # Give it a moment to start
-          sleep 2
-          
-          # Check if process is running
-          if pgrep -f Api.py > /dev/null; then
-            echo "Application started successfully (PID: $(pgrep -f Api.py))"
-            echo "Deployment completed successfully"
-          else
-            echo "Warning: Application may not have started properly"
-            echo "Check log.txt for details"
-          fi
