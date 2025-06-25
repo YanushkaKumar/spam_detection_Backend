@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 import joblib
 import langid
 import numpy as np
@@ -30,6 +31,7 @@ except:
         NLTK_AVAILABLE = False
 
 app = Flask(__name__)
+CORS(app) 
 
 class ImprovedSpamAPI:
     def __init__(self):
