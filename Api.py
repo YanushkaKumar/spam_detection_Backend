@@ -12,6 +12,7 @@ from nltk.tokenize import word_tokenize
 import json
 from datetime import datetime
 import os
+import logging
 
 # Download NLTK data with fallback
 try:
