@@ -1,95 +1,26 @@
-name: Deploy to Azure VM
+name: Deploy Flask App without DockerHub
 
 on:
   push:
     branches:
-      - main
+      - main  # Change this if your main branch has a different name
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 30  # Add explicit timeout
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4  # Updated to latest version
+      uses: actions/checkout@v3
 
-    - name: Copy project to Azure VM
-      uses: appleboy/scp-action@v0.1.4
+    - name: Deploy via SSH
+      uses: appleboy/ssh-action@v1.0.3
       with:
-        host: ${{ secrets.AZURE_VM_IP }}
-        username: ${{ secrets.AZURE_VM_USER }}
-        password: ${{ secrets.AZURE_VM_PASSWORD }}
-        source: "*.py,requirements.txt,templates/,static/"
-        target: "/home/${{ secrets.AZURE_VM_USER }}/backend"
-        timeout: 120s
-        overwrite: true
-        rm: true
-
-    - name: Deploy app on Azure VM
-      uses: appleboy/ssh-action@v1.0.3  # Use specific version instead of master
-      with:
-        host: ${{ secrets.AZURE_VM_IP }}
-        username: ${{ secrets.AZURE_VM_USER }}
-        password: ${{ secrets.AZURE_VM_PASSWORD }}
-        port: 22
-        timeout: 600s  # 10 minutes timeout
-        command_timeout: 120s  # 2 minutes per command timeout
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        key: ${{ secrets.SERVER_SSH_KEY }}
         script: |
-          set -e  # Exit on any error
-          
-          echo "Starting deployment..."
-          
-          # Update system packages
-          echo "Updating packages..."
-          sudo apt update
-          sudo apt install -y python3.10-venv python3-pip
-          
-          # Navigate to project directory
-          echo "Setting up project directory..."
-          cd ~/backend
-          
-          # Create virtual environment if it doesn't exist
-          echo "Setting up virtual environment..."
-          if [ ! -d "venv" ]; then
-            python3 -m venv venv
-          fi
-          
-          # Activate virtual environment and install dependencies
-          echo "Installing dependencies..."
-          source venv/bin/activate
-          pip install --upgrade pip
-          pip install -r requirements.txt
-          
-          # Stop existing process
-          echo "Stopping existing process..."
-          timeout 10s pkill -f Api.py || echo "No existing process found or timeout reached"
-          sleep 2
-          
-          # Force kill if still running
-          if pgrep -f Api.py > /dev/null; then
-            echo "Force killing remaining processes..."
-            timeout 5s pkill -9 -f Api.py || true
-            sleep 1
-          fi
-          
-          # Start the application
-          echo "Starting application..."
-          nohup python3 Api.py > log.txt 2>&1 &
-          APP_PID=$!
-          echo "Application started with PID: $APP_PID"
-          
-          # Wait a moment and check if process is running
-          sleep 3
-          if ps -p $APP_PID > /dev/null; then
-            echo "Application is running successfully"
-            echo "Recent logs:"
-            tail -n 10 log.txt || echo "No logs available yet"
-          else
-            echo "Application failed to start"
-            echo "Error logs:"
-            tail -n 20 log.txt || echo "No logs available"
-            exit 1
-          fi
-          
-          echo "Deployment completed successfully"
+          cd /home/${{ secrets.SERVER_USER }}/.
+          git pull origin main
+          docker-compose down
+          docker-compose up -d --build
