@@ -30,7 +30,9 @@ except:
         NLTK_AVAILABLE = False
 
 app = Flask(__name__)
+CORS(app)
 
+from flask_cors import CORS
 class ImprovedSpamAPI:
     def __init__(self):
         import os
