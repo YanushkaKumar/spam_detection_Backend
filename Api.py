@@ -9,6 +9,9 @@ from Singlish2Sinhala import Translate
 import nltk
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
+import json
+from datetime import datetime
+import os
 
 # Download NLTK data with fallback
 try:
@@ -426,23 +429,37 @@ spam_detector = ImprovedSpamAPI()
 @app.route('/process_text', methods=['POST'])
 def process_text():
     try:
-        # Get the text from the request body
         data = request.get_json()
         if not data or 'text' not in data:
             return jsonify({'error': 'No text provided'}), 400
-            
+
         text_content = data['text']
-        print(f"Received text: {text_content}")
-        
-        # Get prediction with enhanced features
+        client_ip = request.remote_addr
+        timestamp = datetime.now().isoformat()
+
         result = spam_detector.predict_spam(text_content)
-        
-        print(f"Prediction result: {result}")
-        
+
+        # Build log entry
+        log_entry = {
+            "timestamp": timestamp,
+            "client_ip": client_ip,
+            "request": data,
+            "response": result
+        }
+
+        # Save to logs/requests_log.json (append mode)
+        log_dir = '/app/logs'  # Docker path
+        os.makedirs(log_dir, exist_ok=True)
+        log_path = os.path.join(log_dir, 'requests_log.json')
+
+        with open(log_path, 'a') as f:
+            json.dump(log_entry, f)
+            f.write('\n')  # One JSON object per line
+
         return jsonify(result)
 
     except Exception as e:
-        print(f"Error: {str(e)}")
+        logging.error(f" Error: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/health', methods=['GET'])

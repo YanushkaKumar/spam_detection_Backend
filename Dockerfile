@@ -24,7 +24,10 @@ RUN echo "=== Container contents ===" && \
     ls -la /app/models/ || echo "Models directory not found!" && \
     echo "=== Python files ===" && \
     ls -la /app/*.py
+    
+RUN mkdir -p /app/logs
 
+    
 # Set proper permissions
 RUN chmod -R 755 /app
 
