@@ -8,6 +8,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 30  # Set overall job timeout
 
     steps:
     - name: Checkout code
@@ -21,6 +22,7 @@ jobs:
         password: ${{ secrets.AZURE_VM_PASSWORD }}
         source: "."
         target: "/home/${{ secrets.AZURE_VM_USER }}/backend"
+        timeout: 300s  # 5 minute timeout for file transfer
 
     - name: Deploy app on Azure VM
       uses: appleboy/ssh-action@master
@@ -29,13 +31,54 @@ jobs:
         username: ${{ secrets.AZURE_VM_USER }}
         password: ${{ secrets.AZURE_VM_PASSWORD }}
         port: 22
+        timeout: 1800s  # 30 minute timeout for deployment
         script: |
+          set -e  # Exit on any error
+          
+          echo "Starting deployment..."
+          
+          # Update system packages
           sudo apt update
           sudo apt install -y python3.10-venv python3-pip
+          
+          # Navigate to project directory
           cd ~/backend
-          python3 -m venv venv
+          
+          # Create virtual environment if it doesn't exist
+          if [ ! -d "venv" ]; then
+            echo "Creating virtual environment..."
+            python3 -m venv venv
+          fi
+          
+          # Activate virtual environment
           source venv/bin/activate
+          
+          # Upgrade pip
           pip install --upgrade pip
-          pip install -r requirements.txt
+          
+          # Install dependencies with timeout and retry logic
+          echo "Installing dependencies..."
+          timeout 1200 pip install -r requirements.txt --no-cache-dir || {
+            echo "First install attempt failed, retrying..."
+            timeout 1200 pip install -r requirements.txt --no-cache-dir --force-reinstall
+          }
+          
+          # Stop existing application
+          echo "Stopping existing application..."
           pkill -f Api.py || true
+          sleep 5  # Wait for process to fully terminate
+          
+          # Start application
+          echo "Starting application..."
           nohup python3 Api.py > log.txt 2>&1 &
+          
+          # Wait a moment and check if process started
+          sleep 3
+          if pgrep -f Api.py > /dev/null; then
+            echo "Application started successfully"
+          else
+            echo "Failed to start application"
+            exit 1
+          fi
+          
+          echo "Deployment completed successfully"
