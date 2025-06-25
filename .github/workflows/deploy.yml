@@ -1,4 +1,4 @@
-name: Deploy to Azure VM
+name: Deploy to Azure VM with Systemd
 on:
   push:
     branches:
@@ -45,31 +45,42 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements.txt
           
-          # Stop existing process if running
-          pkill -f Api.py || true
+          # Create systemd service file
+          sudo tee /etc/systemd/system/backend-api.service > /dev/null << EOF
+          [Unit]
+          Description=Backend API Service
+          After=network.target
           
-          # Wait a moment for process to fully terminate
-          sleep 2
+          [Service]
+          Type=simple
+          User=${{ secrets.AZURE_VM_USER }}
+          WorkingDirectory=/home/${{ secrets.AZURE_VM_USER }}/backend
+          Environment=PATH=/home/${{ secrets.AZURE_VM_USER }}/backend/venv/bin
+          ExecStart=/home/${{ secrets.AZURE_VM_USER }}/backend/venv/bin/python3 Api.py
+          Restart=always
+          RestartSec=10
+          StandardOutput=journal
+          StandardError=journal
           
-          # Create a startup script
-          cat > start_app.sh << 'EOF'
-            #!/bin/bash
-            cd ~/backend
-            source venv/bin/activate
-            python3 Api.py > log.txt 2>&1 &
-            echo $! > app.pid
-            echo "Application started with PID: $(cat app.pid)"
-            EOF
-                      
-                      # Make script executable and run it
-                      chmod +x start_app.sh
-                      ./start_app.sh
-                      
-                      # Verify the application started
-                      sleep 3
-                      if ps -p $(cat app.pid) > /dev/null 2>&1; then
-                        echo "Application is running successfully with PID: $(cat app.pid)"
-                      else
-                        echo "Failed to start application"
-                        exit 1
-                      fi
+          [Install]
+          WantedBy=multi-user.target
+          EOF
+          
+          # Reload systemd and start service
+          sudo systemctl daemon-reload
+          sudo systemctl stop backend-api || true
+          sudo systemctl start backend-api
+          sudo systemctl enable backend-api
+          
+          # Check service status
+          sleep 3
+          sudo systemctl status backend-api --no-pager
+          
+          # Verify service is running
+          if sudo systemctl is-active --quiet backend-api; then
+            echo "Service is running successfully"
+          else
+            echo "Service failed to start"
+            sudo journalctl -u backend-api --no-pager -n 20
+            exit 1
+          fi
