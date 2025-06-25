@@ -449,7 +449,7 @@ def process_text():
         }
 
         # Save to logs/requests_log.json (append mode)
-        log_dir = '/app/logs'  # Docker path
+        log_dir = 'logs' # Docker path
         os.makedirs(log_dir, exist_ok=True)
         log_path = os.path.join(log_dir, 'requests_log.json')
 
