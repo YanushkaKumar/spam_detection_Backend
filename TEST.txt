@@ -1,9 +1,13 @@
-ජයග්‍රාහකයා ඔබයි! iPhone 14 එකක් නොමිලේ! මෙන්න සබැඳිය👇 www.scamlink.com
+sudo tail -f /var/opt/microsoft/omsagent/c3fc1469-0053-44cb-a22b-635d62e8a7e2/log/omsagent.log
 
+tail -f /home/Yanushka/backend/logs/requests_log.json
 
+docker-compose up -d\& C:/Python313/python.exe d:/Yanushka/Multilingual-Spam-Detector-master/Back_end/Api.py
 
-ඔබ වටිනා ත්‍යාගයක් සඳහා තෝරාගෙන ඇත 🎉! Apply කරන්න අදම!
+docker build -t spam-detection-api .
 
- sudo tail -f /var/opt/microsoft/omsagent/c3fc1469-0053-44cb-a22b-635d62e8a7e2/log/omsagent.log
+docker run -d -p 5000:5000 spam-api
 
- tail -f /home/Yanushka/backend/logs/requests_log.json
+git commit -m "Initial commit: Multilingual Spam Detection API"
+
+git push origin main
