@@ -12,4 +12,10 @@ git commit -m "Initial commit: Multilingual Spam Detection API"
 
 git push origin main
 
-now check the cd ci pipeline
+first we check the model 
+
+now i show the docker file 
+
+ now we check the API and Scripte
+
+ now we deploy this in Azure VM i already create a VM and lets deploy it using CD/CI(git hub Action)
