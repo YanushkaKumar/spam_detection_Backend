@@ -11,3 +11,5 @@ docker run -d -p 5000:5000 spam-api
 git commit -m "Initial commit: Multilingual Spam Detection API"
 
 git push origin main
+
+now check the cd ci pipeline
