@@ -19,3 +19,5 @@ now i show the docker file
  now we check the API and Scripte
 
  now we deploy this in Azure VM i already create a VM and lets deploy it using CD/CI(git hub Action)
+
+ now look it work or not 
