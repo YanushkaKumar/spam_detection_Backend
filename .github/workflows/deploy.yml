@@ -30,57 +30,57 @@ jobs:
         port: 22
         command_timeout: 10m
         script: |
-          # Update system packages
-          sudo apt update
-          sudo apt install -y python3.10-venv python3-pip
-          
-          # Navigate to project directory
-          cd ~/backend
-          
-          # Create and activate virtual environment
-          python3 -m venv venv
-          source venv/bin/activate
-          
-          # Install dependencies
-          pip install --upgrade pip
-          pip install -r requirements.txt
-          
-          # Create systemd service file
-          sudo tee /etc/systemd/system/backend-api.service > /dev/null << EOF
-          [Unit]
-          Description=Backend API Service
-          After=network.target
-          
-          [Service]
-          Type=simple
-          User=${{ secrets.AZURE_VM_USER }}
-          WorkingDirectory=/home/${{ secrets.AZURE_VM_USER }}/backend
-          Environment=PATH=/home/${{ secrets.AZURE_VM_USER }}/backend/venv/bin
-          ExecStart=/home/${{ secrets.AZURE_VM_USER }}/backend/venv/bin/python3 Api.py
-          Restart=always
-          RestartSec=10
-          StandardOutput=journal
-          StandardError=journal
-          
-          [Install]
-          WantedBy=multi-user.target
-          EOF
-          
-          # Reload systemd and start service
-          sudo systemctl daemon-reload
-          sudo systemctl stop backend-api || true
-          sudo systemctl start backend-api
-          sudo systemctl enable backend-api
-          
-          # Check service status
-          sleep 3
-          sudo systemctl status backend-api --no-pager
-          
-          # Verify service is running
-          if sudo systemctl is-active --quiet backend-api; then
-            echo "Service is running successfully"
-          else
-            echo "Service failed to start"
-            sudo journalctl -u backend-api --no-pager -n 20
-            exit 1
-          fi
+              # Update system packages
+              sudo apt update
+              
+              # Install Python 3.12 and venv
+              sudo apt install -y python3.12 python3.12-venv python3-pip
+              
+              # Navigate to project directory
+              cd ~/backend
+              
+              # Create and activate virtual environment
+              python3.12 -m venv venv
+              source venv/bin/activate
+              
+              # Upgrade pip and install dependencies
+              pip install --upgrade pip
+              pip install -r requirements.txt
+              
+              # Create systemd service file
+              sudo tee /etc/systemd/system/backend-api.service > /dev/null << EOF
+              [Unit]
+              Description=Backend API Service
+              After=network.target
+              
+              [Service]
+              Type=simple
+              User=${{ secrets.AZURE_VM_USER }}
+              WorkingDirectory=/home/${{ secrets.AZURE_VM_USER }}/backend
+              Environment=PATH=/home/${{ secrets.AZURE_VM_USER }}/backend/venv/bin
+              ExecStart=/home/${{ secrets.AZURE_VM_USER }}/backend/venv/bin/python3 Api.py
+              Restart=always
+              RestartSec=10
+              StandardOutput=journal
+              StandardError=journal
+              
+              [Install]
+              WantedBy=multi-user.target
+              EOF
+              
+              # Reload systemd and restart service
+              sudo systemctl daemon-reload
+              sudo systemctl stop backend-api || true
+              sudo systemctl start backend-api
+              sudo systemctl enable backend-api
+              
+              # Check service status
+              sleep 3
+              sudo systemctl status backend-api --no-pager
+              if sudo systemctl is-active --quiet backend-api; then
+                echo "Service is running successfully"
+              else
+                echo "Service failed to start"
+                sudo journalctl -u backend-api --no-pager -n 20
+                exit 1
+              fi
