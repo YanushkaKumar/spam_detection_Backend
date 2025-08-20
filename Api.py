@@ -33,7 +33,7 @@ except:
 app = Flask(__name__)
 CORS(app)
 
-# jghsadghsdhfgihsdghhhsdighisdhfgfh#fjfljlfjkljdkjfkjskdfjlkjklfsjdfjkldjsfkjsdfkljl
+
 class ImprovedSpamAPI:
     def __init__(self):
         import os
