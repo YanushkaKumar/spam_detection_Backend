@@ -81,7 +81,7 @@ class ImprovedSpamAPI:
         features['digit_count'] = len([c for c in text if c.isdigit()])
         features['upper_case_count'] = len([c for c in text if c.isupper()])
         features['punctuation_count'] = len([c for c in text if c in string.punctuation])
-        
+        #test
         # Ratios (avoid division by zero)
         if len(text) > 0:
             features['digit_ratio'] = features['digit_count'] / len(text)
